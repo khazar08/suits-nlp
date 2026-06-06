@@ -15,7 +15,10 @@ import streamlit as st
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-DATA_DIR = Path(__file__).parent.parent.parent / "data" / "processed"
+DATA_DIR = _root = Path(__file__).parent.parent.parent
+DATA_DIR = _root / "data" / "processed"
+if not DATA_DIR.exists():
+    DATA_DIR = _root / "processed"
 
 # ── Character colour palette ─────────────────────────────────────────────────
 CHAR_COLORS = {
