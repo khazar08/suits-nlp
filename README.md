@@ -3,7 +3,7 @@
 A research project that reverse-engineers the power dynamics of the TV show *Suits* using web scraping, NLP, graph machine learning, and predictive modeling. Tracks character influence episode-by-episode, predicts who dominates next, and surfaces narrative arc shifts across all nine seasons.
 
 ---
-
+https://suits-nlp-f9wtgu4nbxevikkc9ds4cv.streamlit.app/ 
 ## What it does
 
 **Collects** every line of dialogue from all 134 episodes via Springfield! Springfield! transcripts, optionally aligned to SRT subtitle timestamps.
