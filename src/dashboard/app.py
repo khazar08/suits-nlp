@@ -489,9 +489,9 @@ def tab_predictor():
     model_dir = DATA_DIR.parent / "models"
     model_path = model_dir / ("rf_model.pkl" if model_choice == "random_forest" else "lstm_model.pt")
 
-        if not model_path.exists():
-            _influence_prediction(ep_id, dom)
-            return
+if not model_path.exists():
+    _influence_prediction(ep_id, dom)
+    return
 
 
     try:
