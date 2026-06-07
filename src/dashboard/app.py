@@ -492,8 +492,6 @@ def tab_predictor():
     if not model_path.exists():
         st.info(f"No trained model found at `{model_path}`.  \n"
                 "Run `python src/predict/pipeline.py` on the full dataset first.")
-        # Show mock prediction for demo
-        st.subheader("Demo Prediction (untrained)")
         _demo_prediction(ep_id, dom)
         return
 
