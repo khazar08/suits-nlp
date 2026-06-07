@@ -489,9 +489,14 @@ def tab_predictor():
     model_dir = DATA_DIR.parent / "models"
     model_path = model_dir / ("rf_model.pkl" if model_choice == "random_forest" else "lstm_model.pt")
 
-if not model_path.exists():
-    _influence_prediction(ep_id, dom)
-    return
+    if not model_path.exists():
+        st.info(f"No trained model found at `{model_path}`.  \n"
+                "Run `python src/predict/pipeline.py` on the full dataset first.")
+        # Show mock prediction for demo
+        st.subheader("Demo Prediction (untrained)")
+        _demo_prediction(ep_id, dom)
+        return
+
 
 
     try:
@@ -509,7 +514,7 @@ if not model_path.exists():
 
     except Exception as e:
         st.error(f"Model load failed: {e}")
-        _influence_prediction(ep_id, dom)
+        _demo_prediction(ep_id, dom)
         return
 
     if not ranked:
@@ -569,7 +574,7 @@ def _show_prediction(ranked: dict[str, float], ep_id: str, dom) -> None:
                     st.info(f"{icon} Actual dominant in {next_ep}: **{actual_char}**")
 
 
-def _influence_prediction(ep_id: str, dom) -> None:
+def _demo_prediction(ep_id: str, dom) -> None:
     """Show a plausible-looking prediction using influence scores as proxy."""
     inf = load("suits_influence.csv")
     if inf is None:
