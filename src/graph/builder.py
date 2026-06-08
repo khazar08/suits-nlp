@@ -24,8 +24,6 @@ import networkx as nx
 import pandas as pd
 
 
-# ── Co-occurrence computation ─────────────────────────────────────────────────
-
 def compute_episode_interactions(dialogue_df: pd.DataFrame) -> pd.DataFrame:
     """
     Convert raw dialogue rows (with pipe-separated char_mentions per line)
@@ -132,8 +130,7 @@ def build_cumulative_graph(
     return G
 
 
-# ── Graph stats helper (used by pipeline for printing) ───────────────────────
-
+# Graph stats helper (used by pipeline for printing)
 def graph_summary(graphs: dict[str, nx.Graph]) -> pd.DataFrame:
     rows = []
     for ep_id, G in graphs.items():
