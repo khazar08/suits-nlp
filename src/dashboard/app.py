@@ -20,7 +20,7 @@ DATA_DIR = _root / "data" / "processed"
 if not DATA_DIR.exists():
     DATA_DIR = _root / "processed"
 
-# ── Character colour palette ─────────────────────────────────────────────────
+
 CHAR_COLORS = {
     "Harvey Specter":   "#1565C0",
     "Mike Ross":        "#E65100",
@@ -37,7 +37,7 @@ DEFAULT_COLOR = "#78909C"
 MAIN_CHARS = list(CHAR_COLORS.keys())
 
 
-# ── Page config ───────────────────────────────────────────────────────────────
+# Page config ───────────────────────────────────────────────────────────────
 st.set_page_config(
     page_title="Suits Power Network",
     page_icon="⚖️",
@@ -55,7 +55,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 
-# ── Data loaders (cached) ─────────────────────────────────────────────────────
+#  Data loaders (cached) ─────────────────────────────────────────────────────
 
 @st.cache_data
 def load(filename: str) -> pd.DataFrame | None:
@@ -79,10 +79,6 @@ def char_color(name: str) -> str:
 def episode_label(row) -> str:
     return f"S{int(row.season):02d}E{int(row.episode_num):02d}"
 
-
-# ══════════════════════════════════════════════════════════════════════════════
-# TAB 1 — Character Power Dashboard
-# ══════════════════════════════════════════════════════════════════════════════
 
 def tab_power():
     inf = load("suits_influence.csv")
@@ -163,7 +159,7 @@ def tab_power():
                        legend_title="", margin=dict(t=10))
     st.plotly_chart(fig2, use_container_width=True)
 
-    # ── Dominance count ──────────────────────────────────────────────────────
+    # Dominance count 
     if dom is not None:
         st.subheader("Episodes as Dominant Character")
         dom_filt = dom[dom["season"].isin(sel_seasons)]
@@ -184,10 +180,6 @@ def tab_power():
                            plot_bgcolor="#0e1117", margin=dict(t=10))
         st.plotly_chart(fig3, use_container_width=True)
 
-
-# ══════════════════════════════════════════════════════════════════════════════
-# TAB 2 — Network Graph Viewer
-# ══════════════════════════════════════════════════════════════════════════════
 
 def tab_network():
     ei  = load("suits_episode_interactions.csv")
@@ -285,10 +277,6 @@ def tab_network():
         st.dataframe(cen_ep.style.format({c: "{:.4f}" for c in cen_ep.columns[1:]}),
                      use_container_width=True, hide_index=True)
 
-
-# ══════════════════════════════════════════════════════════════════════════════
-# TAB 3 — Emotion Tracker
-# ══════════════════════════════════════════════════════════════════════════════
 
 def tab_emotion():
     feat = load("suits_features.csv")
@@ -390,9 +378,6 @@ def tab_emotion():
     st.plotly_chart(fig4, use_container_width=True)
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-# TAB 4 — Story Evolution
-# ══════════════════════════════════════════════════════════════════════════════
 
 def tab_story():
     evo  = load("suits_topic_evolution.csv")
@@ -460,9 +445,6 @@ def tab_story():
             st.dataframe(pivot, use_container_width=True)
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-# TAB 5 — Dominance Predictor
-# ══════════════════════════════════════════════════════════════════════════════
 
 def tab_predictor():
     feat_df = load("suits_predict_features.csv")
@@ -586,10 +568,6 @@ def _demo_prediction(ep_id: str, dom) -> None:
               for _, row in ep_inf.iterrows()}
     _show_prediction(ranked, ep_id, dom)
 
-
-# ══════════════════════════════════════════════════════════════════════════════
-# Main
-# ══════════════════════════════════════════════════════════════════════════════
 
 def main():
     st.title("⚖️ Suits Power Network")
