@@ -1,6 +1,6 @@
 # Suits NLP
 
-A research project that reverse-engineers the power dynamics of the TV show *Suits* using web scraping, NLP, graph machine learning, and predictive modeling. Tracks character influence episode-by-episode, predicts who dominates next, and surfaces narrative arc shifts across all nine seasons.
+A research project that reverse-engineers the power dynamics of the TV show *Suits* using web scraping, Natural Language Processing, graph machine learning, and predictive modeling. Tracks character influence episode-by-episode, predicts who dominates next, and surfaces narrative arc shifts across all nine seasons.
 
 ---
 https://suits-nlp-f9wtgu4nbxevikkc9ds4cv.streamlit.app/ 
