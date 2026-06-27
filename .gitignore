@@ -1,0 +1,12 @@
+data/raw/
+data/models/
+data/processed/suits_dialogue.csv
+data/processed/suits_cooccurrence.csv
+data/processed/suits_scene_characters.csv
+__pycache__/
+*.pyc
+.venv/
+venv/
+.env
+*.egg-info/
+dist/
