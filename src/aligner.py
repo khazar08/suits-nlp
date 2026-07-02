@@ -1,13 +1,3 @@
-"""
-Aligns speaker-attributed transcript lines (from scraper)
-with timestamps (from SRT parser) using fuzzy text matching.
-
-Strategy:
-  For each episode, we build a normalized version of both text sources,
-  then use difflib.SequenceMatcher to find the best SRT block for each
-  transcript line. Lines that don't match above min_ratio get None timestamps.
-"""
-
 import re
 import difflib
 from typing import Optional
