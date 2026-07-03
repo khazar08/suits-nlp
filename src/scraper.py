@@ -1,21 +1,7 @@
-"""
-Scrapes Suits episode scripts from Springfield! Springfield!
-and produces structured dialogue rows.
-
-Important: Springfield transcripts have NO speaker labels —
-dialogue is raw text separated by <br/> with no character attribution.
-Speaker attribution happens later in the NLP pipeline (Step 2).
-For graph construction we use character-mention extraction per scene.
-
-Run via pipeline.py — or directly:
-    python src/scraper.py --out data/
-"""
-
 import re
 import time
 import argparse
 from pathlib import Path
-
 import requests
 import pandas as pd
 from bs4 import BeautifulSoup
@@ -27,7 +13,6 @@ EPISODE_URL = f"{BASE_URL}/view_episode_scripts.php?tv-show=suits&episode={{code
 HEADERS = {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"}
 REQUEST_DELAY = 1.5  # seconds — polite scraping
 
-# All recurring characters across 9 seasons (first-name keys → canonical full name)
 CHARACTER_MAP = {
     "Harvey":   "Harvey Specter",
     "Mike":     "Mike Ross",
@@ -66,11 +51,9 @@ CHARACTER_MAP = {
 
 SUITS_CHARACTERS = sorted(CHARACTER_MAP.keys(), key=len, reverse=True)  # longest first
 
-# Pre-compiled regex to detect character name mentions inside dialogue text
 _char_alts = "|".join(re.escape(c) for c in SUITS_CHARACTERS)
 MENTION_RE = re.compile(rf"\b({_char_alts})\b")
 
-# Lines to discard: very short, all-caps headings, stage directions
 _DISCARD_RE = re.compile(r"^\[.*\]$|^[A-Z\s]{2,30}$")
 
 
@@ -100,10 +83,6 @@ def get_episode_list() -> list[dict]:
 
 
 def fetch_lines(code: str) -> list[str]:
-    """
-    Fetch an episode page and return dialogue as a list of sentence-level strings.
-    Springfield uses <br/> as sentence separators inside a single div.
-    """
     url = EPISODE_URL.format(code=code)
     resp = requests.get(url, headers=HEADERS, timeout=15)
     resp.raise_for_status()
@@ -117,7 +96,6 @@ def fetch_lines(code: str) -> list[str]:
     if not container:
         return []
 
-    # Split on <br/> — each fragment becomes a candidate dialogue line
     raw_lines: list[str] = []
     for part in container.decode_contents().split("<br/>"):
         text = BeautifulSoup(part, "lxml").get_text(" ", strip=True)
@@ -139,7 +117,6 @@ def parse_lines(
     line_num = 0
 
     for raw in raw_lines:
-        # Drop very short lines, all-caps headings, and bracketed stage directions
         if len(raw) < 8 or _DISCARD_RE.match(raw):
             continue
 
@@ -171,7 +148,6 @@ def scrape_all(
     transcripts_dir = raw_dir / "transcripts"
     transcripts_dir.mkdir(parents=True, exist_ok=True)
 
-    print("Fetching episode list from Springfield! Springfield!...")
     episodes = get_episode_list()
     if seasons:
         episodes = [e for e in episodes if e["season"] in seasons]
@@ -191,7 +167,6 @@ def scrape_all(
             )
             all_rows.extend(rows)
 
-            # Save raw lines for re-parsing without re-scraping
             raw_path = transcripts_dir / f"{ep['episode_id']}.txt"
             raw_path.write_text("\n".join(raw_lines), encoding="utf-8")
 
