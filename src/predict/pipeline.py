@@ -1,28 +1,7 @@
-"""
-Prediction Pipeline — Step 5 Orchestrator
-
-Reads from data/processed/:
-  suits_influence.csv, suits_centrality.csv, suits_features.csv,
-  suits_dominance.csv, suits_power_trajectory.csv
-
-Writes to data/processed/:
-  suits_predict_features.csv   — full feature matrix with targets
-  suits_eval_results.csv       — per-model evaluation metrics
-  suits_feature_importance.csv — top features from RF + XGBoost
-
-Saves trained models to data/models/
-
-Usage:
-    python src/predict/pipeline.py                    # train all 3 models
-    python src/predict/pipeline.py --model rf         # only random forest
-    python src/predict/pipeline.py --predict S05E08   # predict next after S05E08
-"""
-
 import argparse
 import sys
 import warnings
 from pathlib import Path
-
 import numpy as np
 import pandas as pd
 from sklearn.metrics import (
@@ -41,8 +20,6 @@ from predict.models import RandomForestPredictor, XGBoostPredictor, LSTMPredicto
 MIN_EPISODES = 10   # minimum for any meaningful training
 
 
-# ── Data loading ──────────────────────────────────────────────────────────────
-
 def load_data(processed_dir: Path) -> dict[str, pd.DataFrame]:
     required = {
         "influence":   "suits_influence.csv",
@@ -59,19 +36,11 @@ def load_data(processed_dir: Path) -> dict[str, pd.DataFrame]:
     return data
 
 
-# ── Temporal train / test split ───────────────────────────────────────────────
-
 def temporal_split(
     feature_df: pd.DataFrame,
     train_seasons: list[int] | None = None,
     test_season: int | None = None,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """
-    Split strictly by time — no leaking future data into training.
-
-    Default: train S01-S07, test S08-S09.
-    With only 1 season of data, uses 80/20 episode split.
-    """
     seasons = sorted(feature_df["season"].unique())
     n_seasons = len(seasons)
 
@@ -95,18 +64,12 @@ def temporal_split(
     return train, test
 
 
-# ── Evaluation ────────────────────────────────────────────────────────────────
 
 def evaluate_model(
     model,
     feature_df: pd.DataFrame,
     test_df: pd.DataFrame,
 ) -> dict:
-    """
-    Per-episode top-1 and top-3 accuracy.
-    For each test episode, rank all characters by predicted probability,
-    check if the actual dominant character is in top-1 / top-3.
-    """
     dom = test_df[["episode_id", "next_dominant"]].dropna().drop_duplicates()
     test_episodes = dom["episode_id"].tolist()
 
@@ -146,8 +109,6 @@ def evaluate_model(
     return result, pd.DataFrame(predictions)
 
 
-# ── Inference: predict next episode ──────────────────────────────────────────
-
 def predict_next(model, feature_df: pd.DataFrame, episode_id: str) -> None:
     """Pretty-print prediction for the episode after episode_id."""
     ranked = model.predict_proba_dominance(feature_df, episode_id)
@@ -165,8 +126,6 @@ def predict_next(model, feature_df: pd.DataFrame, episode_id: str) -> None:
         print(f"  {i}. {char:<25} {prob:.3f}  {bar}{marker}")
 
 
-# ── Full pipeline ─────────────────────────────────────────────────────────────
-
 def run(
     data_dir: Path,
     models_to_train: list[str] = ("rf", "xgb", "lstm"),
@@ -176,8 +135,6 @@ def run(
     models_dir = data_dir / "models"
     models_dir.mkdir(parents=True, exist_ok=True)
 
-    # ── Load ─────────────────────────────────────────────────────────────────
-    _h("Loading data")
     data = load_data(processed)
     n_eps = data["influence"]["episode_id"].nunique()
     print(f"  Episodes: {n_eps}  |  Characters in influence: {data['influence']['character'].nunique()}")
@@ -188,8 +145,6 @@ def run(
         print(f"     Run the full scrape (python src/pipeline.py) first.")
         print(f"\n  Running feature engineering demo on available data...")
 
-    # ── Feature engineering ───────────────────────────────────────────────────
-    _h("Building feature matrix")
     feature_df = build_feature_matrix(
         data["influence"], data["centrality"],
         data["nlp"], data["dominance"],
@@ -207,8 +162,6 @@ def run(
         print("  Feature matrix saved. Re-run after full scrape.")
         return {"feature_df": feature_df}
 
-    # ── Train / test split ────────────────────────────────────────────────────
-    _h("Temporal train / test split")
     train_df, test_df = temporal_split(feature_df)
     X_train, y_train = get_X_y(train_df)
     X_test,  y_test  = get_X_y(test_df)
@@ -216,7 +169,6 @@ def run(
 
     results, predictors = [], {}
 
-    # ── Random Forest ─────────────────────────────────────────────────────────
     if "rf" in models_to_train:
         _h("Training Random Forest")
         rf = RandomForestPredictor(n_estimators=300)
@@ -234,7 +186,6 @@ def run(
         for feat, imp in fi.items():
             print(f"    {feat:<40} {imp:.4f}")
 
-    # ── XGBoost ───────────────────────────────────────────────────────────────
     if "xgb" in models_to_train:
         _h("Training XGBoost")
         try:
@@ -250,7 +201,6 @@ def run(
         except ImportError:
             print("  XGBoost not installed — skipping.")
 
-    # ── LSTM ──────────────────────────────────────────────────────────────────
     if "lstm" in models_to_train:
         _h("Training LSTM")
         X_wide, y_wide = build_lstm_matrix(feature_df)
@@ -264,7 +214,6 @@ def run(
         lstm.save(models_dir / "lstm_model.pt")
         predictors["lstm"] = lstm
 
-        # Evaluate LSTM episode-by-episode
         dom = test_df[["episode_id","next_dominant"]].dropna().drop_duplicates()
         top1, top3 = 0, 0
         for _, row in dom.iterrows():
@@ -283,14 +232,11 @@ def run(
         print(f"  Top-1 accuracy: {metrics['top1_accuracy']:.3f}")
         print(f"  Top-3 accuracy: {metrics['top3_accuracy']:.3f}")
 
-    # ── Summary ───────────────────────────────────────────────────────────────
-    _h("Evaluation Summary")
     if results:
         eval_df = pd.DataFrame(results)
         eval_df.to_csv(processed / "suits_eval_results.csv", index=False)
         print(eval_df.to_string(index=False))
 
-    # ── Inference ─────────────────────────────────────────────────────────────
     if predict_after and predictors:
         _h(f"Inference — predicting after {predict_after}")
         best_model = predictors.get("xgb") or predictors.get("rf") or list(predictors.values())[0]
