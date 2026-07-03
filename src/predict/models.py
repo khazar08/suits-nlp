@@ -1,18 +1,3 @@
-"""
-Prediction Models — Step 5.2
-
-Three models with a unified interface:
-
-  RandomForestPredictor   — interpretable baseline, handles small datasets
-  XGBoostPredictor        — gradient boosting, usually best on tabular data
-  LSTMPredictor           — sequence model capturing temporal patterns
-
-All expose:
-  .fit(X_train, y_train)
-  .predict_proba_dominance(feature_df, episode_id) → {char: prob}
-  .save(path) / .load(path)
-"""
-
 import json
 import pickle
 from pathlib import Path
@@ -24,18 +9,12 @@ import pandas as pd
 from predict.features import MAIN_CHARS, FEATURE_COLS
 
 
-# ── Shared prediction helper ──────────────────────────────────────────────────
-
 def _rank_characters(
     clf,
     feature_df: pd.DataFrame,
     episode_id: str,
     feature_cols: list[str],
 ) -> dict[str, float]:
-    """
-    Run binary classifier over all characters for a given episode.
-    Returns {character: P(is_dominant)} normalized to sum to 1.
-    """
     ep_rows = feature_df[feature_df["episode_id"] == episode_id].copy()
     if ep_rows.empty:
         return {}
@@ -56,7 +35,6 @@ def _rank_characters(
     return dict(sorted(probs.items(), key=lambda x: x[1], reverse=True))
 
 
-# ── Random Forest ─────────────────────────────────────────────────────────────
 
 class RandomForestPredictor:
     name = "random_forest"
@@ -102,9 +80,6 @@ class RandomForestPredictor:
         m = cls.__new__(cls)
         m.clf, m._feature_cols = obj["clf"], obj["cols"]
         return m
-
-
-# ── XGBoost ───────────────────────────────────────────────────────────────────
 
 class XGBoostPredictor:
     name = "xgboost"
@@ -173,9 +148,6 @@ class XGBoostPredictor:
             (path.parent / f"{path.stem}_cols.json").read_text()
         )
         return m
-
-
-# ── LSTM ──────────────────────────────────────────────────────────────────────
 
 class LSTMPredictor:
     """
@@ -310,10 +282,6 @@ class LSTMPredictor:
     def predict_proba_dominance(
         self, X_wide: pd.DataFrame, episode_id: str
     ) -> dict[str, float]:
-        """
-        X_wide: full wide episode matrix (index = episode_ids).
-        Returns {char: prob} for the episode AFTER episode_id.
-        """
         import torch, torch.nn.functional as F
 
         if self._net is None:
