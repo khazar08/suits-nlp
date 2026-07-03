@@ -1,16 +1,3 @@
-"""
-Legal Power Language Detector for Suits dialogue.
-
-Classifies each line into one of five categories using regex pattern matching:
-  commanding    — issuing orders, asserting authority
-  defensive     — denying, deflecting, justifying
-  manipulative  — conditional threats, leveraging relationships
-  assertive     — confident declarations, guarantees, promises
-  neutral       — none of the above
-
-Also returns per-category raw scores (pattern hit counts) for fine-grained analysis.
-"""
-
 import re
 from typing import NamedTuple
 
@@ -21,8 +8,6 @@ class PowerScores(NamedTuple):
     manipulative: float
     assertive:    float
 
-
-# ── Pattern banks ─────────────────────────────────────────────────────────────
 
 _COMMANDING = [
     r"\byou (will|must|shall|are going to)\b",
@@ -80,7 +65,6 @@ _ASSERTIVE = [
     r"\bI stand by\b",
 ]
 
-# Pre-compile all patterns
 _COMPILED = {
     "commanding":   [re.compile(p, re.IGNORECASE) for p in _COMMANDING],
     "defensive":    [re.compile(p, re.IGNORECASE) for p in _DEFENSIVE],
