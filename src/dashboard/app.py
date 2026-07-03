@@ -1,11 +1,5 @@
-"""
-Suits Power Network — Streamlit Dashboard
-Run: streamlit run src/dashboard/app.py
-"""
-
 import sys
 from pathlib import Path
-
 import networkx as nx
 import numpy as np
 import pandas as pd
@@ -37,7 +31,6 @@ DEFAULT_COLOR = "#78909C"
 MAIN_CHARS = list(CHAR_COLORS.keys())
 
 
-# Page config ───────────────────────────────────────────────────────────────
 st.set_page_config(
     page_title="Suits Power Network",
     page_icon="⚖️",
