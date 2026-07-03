@@ -1,22 +1,7 @@
-"""
-Assigns scene IDs to dialogue rows.
-
-Two strategies, selected automatically:
-  1. Time-gap segmentation  — uses SRT timestamps (preferred)
-  2. Character-change segmentation — fallback when timestamps are absent
-
-Scene IDs are formatted as:  S01E01_SC001
-"""
-
 import pandas as pd
 
 
 def segment_by_time_gap(df: pd.DataFrame, gap_seconds: float = 30.0) -> pd.DataFrame:
-    """
-    New scene whenever there is a silence gap > gap_seconds between subtitle blocks.
-
-    Requires: timestamp_start, timestamp_end columns (float seconds).
-    """
     df = df.copy()
     df = df.sort_values(["episode_id", "timestamp_start"]).reset_index(drop=True)
 
@@ -44,12 +29,6 @@ def segment_by_time_gap(df: pd.DataFrame, gap_seconds: float = 30.0) -> pd.DataF
 
 
 def segment_by_character_change(df: pd.DataFrame, window: int = 6) -> pd.DataFrame:
-    """
-    Fallback: new scene when the set of speakers in a sliding window
-    changes completely relative to the previous window.
-
-    window: number of lines to consider for the active character set.
-    """
     df = df.copy().reset_index(drop=True)
     scene_col: list[int] = []
 
@@ -84,7 +63,6 @@ def segment_by_character_change(df: pd.DataFrame, window: int = 6) -> pd.DataFra
 
 
 def add_scenes(df: pd.DataFrame, gap_seconds: float = 30.0) -> pd.DataFrame:
-    """Auto-selects strategy based on whether timestamps are present."""
     has_timestamps = (
         "timestamp_start" in df.columns
         and df["timestamp_start"].notna().mean() > 0.3
