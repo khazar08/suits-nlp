@@ -1,14 +1,3 @@
-"""
-Parses OpenSubtitles-format SRT files into a structured DataFrame.
-
-Place SRT files under data/raw/srt/ — see PLACE_SRT_FILES_HERE.txt.
-Filenames must contain the season/episode code, e.g.:
-    S01E01.srt  |  suits_s01e01.srt  |  Suits.S01E01.HDTV.srt
-
-Run directly:
-    python src/srt_parser.py --srt-dir data/raw/srt --out data/srt_parsed.csv
-"""
-
 import re
 import argparse
 from pathlib import Path
@@ -22,10 +11,7 @@ _TS_RE = re.compile(
     r"(\d{2}):(\d{2}):(\d{2})[,.](\d{3})"
 )
 
-# HTML / formatting tags common in SRT files
 _TAG_RE = re.compile(r"<[^>]+>|\{[^}]+\}")
-
-# Musical notes and sound effect markers — not dialogue
 _EFFECT_RE = re.compile(r"^[\[{(♪♫]|^\s*#")
 
 
