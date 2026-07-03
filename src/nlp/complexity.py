@@ -1,18 +1,3 @@
-"""
-Linguistic complexity metrics per dialogue line.
-No external NLP dependencies — pure Python + regex.
-
-Metrics:
-  word_count         — total words
-  char_count         — total non-space characters
-  unique_word_ratio  — type-token ratio (lexical diversity)
-  flesch_ease        — Flesch Reading Ease (higher = simpler)
-  gunning_fog        — Gunning Fog grade level
-  avg_word_length    — mean characters per word
-  is_question        — ends with ?
-  is_exclamation     — ends with !
-"""
-
 import re
 
 _SENT_SPLIT = re.compile(r"[.!?]+")
