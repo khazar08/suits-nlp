@@ -19,14 +19,6 @@ def _find_best_srt_match(
     min_ratio: float,
     search_window: Optional[tuple[int, int]] = None,
 ) -> Optional[int]:
-    """
-    Return the index into `candidates` with the best match to `query`,
-    or None if the best ratio is below min_ratio.
-
-    search_window: (lo, hi) restricts search to a contiguous range of candidates.
-    This speeds up alignment dramatically for long episodes by exploiting the
-    fact that transcript order ≈ subtitle order.
-    """
     lo, hi = search_window if search_window else (0, len(candidates))
     lo = max(0, lo)
     hi = min(len(candidates), hi)
@@ -49,15 +41,6 @@ def align_transcripts_with_srt(
     min_ratio: float = 0.55,
     window_half: int = 30,
 ) -> pd.DataFrame:
-    """
-    Merge speaker labels from transcript_df with timestamps from srt_df.
-
-    transcript_df columns: episode_id, speaker, line, ...
-    srt_df columns:        episode_id, line, timestamp_start, timestamp_end
-
-    Returns a DataFrame with all transcript_df columns plus
-    timestamp_start and timestamp_end (None where no SRT match found).
-    """
     result_rows: list[dict] = []
     srt_episodes = set(srt_df["episode_id"].unique()) if not srt_df.empty else set()
 
