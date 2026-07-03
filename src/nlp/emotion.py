@@ -1,22 +1,5 @@
-"""
-Emotion classification for Suits dialogue lines.
-
-Two modes — selected automatically based on what's installed:
-
-  FAST (default):
-    Keyword-based heuristic. Instant, no GPU. Returns one of:
-    anger | fear | joy | sadness | disgust | surprise | trust | neutral
-
-  TRANSFORMER (--use-transformers flag in features.py):
-    Uses j-hartmann/emotion-english-distilroberta-base (HuggingFace).
-    Classifies into: anger | disgust | fear | joy | neutral | sadness | surprise
-    Requires: pip install transformers torch
-    Runs in batches on CPU or MPS (Apple Silicon).
-"""
-
 import re
 
-# ── Keyword banks for fast mode ───────────────────────────────────────────────
 
 _KEYWORDS: dict[str, list[str]] = {
     "anger": [
@@ -57,7 +40,6 @@ _KEYWORDS: dict[str, list[str]] = {
     ],
 }
 
-# Pre-compile as single pattern per emotion
 _COMPILED_KW: dict[str, re.Pattern] = {
     emotion: re.compile(
         "|".join(re.escape(kw) for kw in sorted(kws, key=len, reverse=True)),
@@ -86,7 +68,6 @@ def score_batch_fast(texts: list[str]) -> list[dict]:
     return [_score_fast(t) for t in texts]
 
 
-# ── Transformer mode ──────────────────────────────────────────────────────────
 
 _pipe = None  # lazy-loaded HuggingFace pipeline
 _TRANSFORMER_MODEL = "j-hartmann/emotion-english-distilroberta-base"
@@ -122,7 +103,6 @@ def score_batch_transformer(texts: list[str], batch_size: int = 64) -> list[dict
 
     for i in range(0, len(texts), batch_size):
         batch = texts[i : i + batch_size]
-        # Truncate each text to avoid tokenizer warnings on very long lines
         batch = [t[:512] for t in batch]
         preds = pipe(batch)
         for pred in preds:
