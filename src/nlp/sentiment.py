@@ -1,8 +1,3 @@
-"""
-VADER sentiment scoring — fast, no GPU needed, tuned for conversational text.
-Returns compound score + positive/negative/neutral breakdown per line.
-"""
-
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 
 _sia: SentimentIntensityAnalyzer | None = None
