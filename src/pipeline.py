@@ -1,42 +1,6 @@
-"""
-Suits Dialogue Dataset Pipeline
-================================
-Produces three CSV files in data/processed/:
-
-  suits_dialogue.csv           — line-level dialogue with scene IDs
-  suits_scene_characters.csv   — characters present per scene (mention-based)
-  suits_cooccurrence.csv       — character pair edges per scene (for graph ML)
-  suits_episode_interactions.csv — aggregated edge weights per episode
-
-Columns in suits_dialogue.csv:
-  episode_id, season, episode_num, episode_title,
-  scene_id, line_num, speaker, line,
-  char_mentions, mention_count,
-  timestamp_start, timestamp_end, srt_match_ratio
-
-Note on speaker attribution:
-  Springfield transcripts have no speaker labels (all lines are speaker=UNKNOWN).
-  For NLP feature engineering, apply your speaker attribution model in Step 2.
-  For graph analysis, use suits_cooccurrence.csv which is built from character
-  name MENTIONS — the standard approach for TV-show network studies.
-
-Usage
------
-Full run (scrape + process):
-    python src/pipeline.py
-
-Skip scraping (use existing raw CSV):
-    python src/pipeline.py --skip-scrape
-
-With SRT timestamps:
-    1. Place .srt files in data/raw/srt/  (see PLACE_SRT_FILES_HERE.txt)
-    2. python src/pipeline.py
-"""
-
 import argparse
 import sys
 from pathlib import Path
-
 import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).parent))
@@ -62,8 +26,6 @@ def run(data_dir: Path, skip_scrape: bool, gap_seconds: float, seasons: list[int
     out_dir = data_dir / "processed"
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    # ── Step 1: Transcripts ──────────────────────────────────────────────────
-    _header("STEP 1: Dialogue transcripts")
     if skip_scrape:
         if not raw_csv.exists():
             sys.exit(f"[ERROR] {raw_csv} not found. Run without --skip-scrape first.")
@@ -73,7 +35,6 @@ def run(data_dir: Path, skip_scrape: bool, gap_seconds: float, seasons: list[int
     else:
         transcript_df = scrape_all(data_dir, seasons=seasons)
 
-    # ── Step 2: SRT timestamps (optional) ────────────────────────────────────
     srt_files = list(srt_dir.rglob("*.srt")) if srt_dir.exists() else []
     if srt_files:
         _header(f"STEP 2: Parsing {len(srt_files)} SRT files")
@@ -93,22 +54,15 @@ def run(data_dir: Path, skip_scrape: bool, gap_seconds: float, seasons: list[int
         merged_df["srt_match_ratio"] = None
         step_offset = 0
 
-    # ── Step 3/4: Scene segmentation ─────────────────────────────────────────
-    _header(f"STEP {3 + step_offset}: Scene segmentation")
     dialogue_df = add_scenes(merged_df, gap_seconds=gap_seconds)
 
-    # ── Step 4/5: Character co-occurrence ─────────────────────────────────────
-    _header(f"STEP {4 + step_offset}: Character co-occurrence extraction")
     scene_chars, cooc, ep_interactions = character_extractor.run(dialogue_df, out_dir)
 
-    # ── Save dialogue CSV ─────────────────────────────────────────────────────
     available = [c for c in DIALOGUE_COLUMNS if c in dialogue_df.columns]
     dialogue_df = dialogue_df[available].reset_index(drop=True)
     dialogue_path = out_dir / "suits_dialogue.csv"
     dialogue_df.to_csv(dialogue_path, index=False)
 
-    # ── Summary ───────────────────────────────────────────────────────────────
-    _header("DATASET SUMMARY")
     print(f"  suits_dialogue.csv          {len(dialogue_df):>8,} lines")
     print(f"  suits_scene_characters.csv  {len(scene_chars):>8,} (scene, char) pairs")
     print(f"  suits_cooccurrence.csv      {len(cooc):>8,} scene edges")
@@ -130,7 +84,6 @@ def run(data_dir: Path, skip_scrape: bool, gap_seconds: float, seasons: list[int
             cooc.groupby(["char_a", "char_b"])["edge_weight"]
             .sum().sort_values(ascending=False).head(8)
         )
-        print("\n  Top character interactions (all seasons):")
         for (a, b), w in top_pairs.items():
             print(f"    {a:<22} ↔ {b:<22} {w:>7.1f}")
 
