@@ -1,16 +1,3 @@
-"""
-Builds scene-level character co-occurrence data from dialogue lines.
-
-Since Springfield transcripts have no speaker labels, we use character NAME
-MENTIONS in dialogue as a proxy for scene presence. This is the standard
-approach for TV-show network analysis and is sufficient to build the
-interaction graph specified in the SPEC.
-
-Output:
-  suits_scene_characters.csv  — one row per (scene, character) pair
-  suits_cooccurrence.csv      — one row per (scene, char_a, char_b) pair
-"""
-
 import re
 from itertools import combinations
 
@@ -24,11 +11,6 @@ MENTION_WINDOW = 3
 
 
 def extract_scene_characters(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    For each scene, collect the set of characters mentioned in its dialogue.
-    Returns a long-format DataFrame with columns:
-      scene_id, episode_id, season, episode_num, character, mention_count
-    """
     if "scene_id" not in df.columns:
         raise ValueError("DataFrame must have a scene_id column — run scene_segmenter first.")
 
@@ -37,7 +19,6 @@ def extract_scene_characters(df: pd.DataFrame) -> pd.DataFrame:
         season = group["season"].iloc[0]
         ep_num = group["episode_num"].iloc[0]
 
-        # Collect all character mentions across all lines in this scene
         mention_counts: dict[str, int] = {}
         for mentions_str in group["char_mentions"].dropna():
             if not mentions_str:
@@ -61,16 +42,6 @@ def extract_scene_characters(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def build_cooccurrence(scene_chars_df: pd.DataFrame, min_mentions: int = 1) -> pd.DataFrame:
-    """
-    For every scene, create edges between all pairs of characters present.
-    Edge weight = geometric mean of the two characters' mention counts.
-
-    min_mentions: minimum times a character must be mentioned to count as present.
-
-    Returns DataFrame with columns:
-      scene_id, episode_id, season, episode_num,
-      char_a, char_b, weight_a, weight_b, edge_weight
-    """
     rows = []
 
     for (scene_id, ep_id), group in scene_chars_df.groupby(["scene_id", "episode_id"], sort=False):
