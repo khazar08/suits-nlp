@@ -1,44 +1,12 @@
-"""
-Centrality + Dynamic Influence Score — Step 3 / 4
-
-Centrality metrics computed per episode graph:
-  degree_centrality     — fraction of possible connections used
-  betweenness_centrality— fraction of all shortest paths through this node
-  eigenvector_centrality— weighted score from being connected to high scorers
-  pagerank              — authority score (who controls the network)
-
-Dynamic Influence Score (SPEC formula):
-  Influence = 0.4 × PageRank_norm
-            + 0.3 × Mention_Volume_Share
-            + 0.3 × Sentiment_Control_norm
-
-  PageRank_norm          — min-max normalized within episode
-  Mention_Volume_Share   — character's mention count / episode total mentions
-  Sentiment_Control_norm — normalized mean |vader_compound| of scenes
-                           where character appears (from suits_features.csv)
-
-Outputs:
-  suits_centrality.csv       — all four centrality metrics per (episode, char)
-  suits_influence.csv        — influence scores + per-episode ranks
-  suits_power_trajectory.csv — influence over time, with rank_change column
-  suits_dominance.csv        — dominant character per episode
-"""
-
 import warnings
 import networkx as nx
 import pandas as pd
 import numpy as np
 
 
-# ── Centrality ────────────────────────────────────────────────────────────────
-
 def compute_centrality(
     graphs: dict[str, nx.Graph],
 ) -> pd.DataFrame:
-    """
-    Compute degree, betweenness, eigenvector, and PageRank for every
-    episode graph. Returns a long-format DataFrame.
-    """
     rows = []
 
     for ep_id, G in graphs.items():
@@ -87,9 +55,6 @@ def compute_centrality(
         df = df.sort_values(["season", "episode_num", "pagerank"], ascending=[True, True, False])
     return df
 
-
-# ── Influence Score ───────────────────────────────────────────────────────────
-
 def _minmax_norm(series: pd.Series) -> pd.Series:
     lo, hi = series.min(), series.max()
     return (series - lo) / (hi - lo + 1e-9)
@@ -103,14 +68,7 @@ def compute_influence(
     w_volume:   float = 0.3,
     w_sentiment: float = 0.3,
 ) -> pd.DataFrame:
-    """
-    Compute the dynamic influence score per (episode, character).
-
-    dialogue_df  — suits_dialogue.csv  (has char_mentions, scene_id, episode_id)
-    features_df  — suits_features.csv  (has scene_id, vader_compound)
-    """
-
-    # ── Component 1: mention volume share ────────────────────────────────────
+  
     char_mentions = (
         dialogue_df[dialogue_df["char_mentions"].notna() & (dialogue_df["char_mentions"] != "")]
         .assign(chars=lambda d: d["char_mentions"].str.split("|"))
@@ -128,9 +86,7 @@ def compute_influence(
     char_mentions["mention_volume_share"] = (
         char_mentions["char_ep_mentions"] / char_mentions["ep_total_mentions"]
     ).round(6)
-
-    # ── Component 2: sentiment control ───────────────────────────────────────
-    # For each scene, compute mean |vader_compound| across all lines
+  
     scene_sentiment = (
         features_df.groupby(["episode_id", "scene_id"])["vader_compound"]
         .apply(lambda x: x.abs().mean())
@@ -138,7 +94,6 @@ def compute_influence(
         .rename(columns={"vader_compound": "scene_abs_sentiment"})
     )
 
-    # For each (episode, character), get scenes they appear in and average sentiment
     scene_chars = (
         dialogue_df[dialogue_df["char_mentions"].notna() & (dialogue_df["char_mentions"] != "")]
         .assign(chars=lambda d: d["char_mentions"].str.split("|"))
@@ -155,33 +110,27 @@ def compute_influence(
         .rename(columns={"scene_abs_sentiment": "sentiment_control_raw"})
     )
 
-    # ── Merge all components onto centrality_df ───────────────────────────────
     df = centrality_df.copy()
     df = df.merge(char_mentions[["episode_id", "character", "mention_volume_share"]], on=["episode_id", "character"], how="left")
     df = df.merge(scene_chars, on=["episode_id", "character"], how="left")
     df["mention_volume_share"]   = df["mention_volume_share"].fillna(0)
     df["sentiment_control_raw"]  = df["sentiment_control_raw"].fillna(0)
 
-    # ── Normalize within each episode ────────────────────────────────────────
     df["pagerank_norm"]        = df.groupby("episode_id")["pagerank"].transform(_minmax_norm)
     df["sentiment_control_norm"] = df.groupby("episode_id")["sentiment_control_raw"].transform(_minmax_norm)
 
-    # ── Composite influence score ────────────────────────────────────────────
     df["influence_score"] = (
         w_pagerank   * df["pagerank_norm"]
         + w_volume   * df["mention_volume_share"]
         + w_sentiment * df["sentiment_control_norm"]
     ).round(6)
 
-    # ── Per-episode rank (1 = most influential) ───────────────────────────────
     df["influence_rank"] = df.groupby("episode_id")["influence_score"].rank(
         ascending=False, method="min"
     ).astype(int)
 
     return df.sort_values(["season", "episode_num", "influence_rank"])
 
-
-# ── Power trajectory & shift detection ───────────────────────────────────────
 
 def compute_power_trajectory(influence_df: pd.DataFrame) -> pd.DataFrame:
     """
@@ -197,7 +146,6 @@ def compute_power_trajectory(influence_df: pd.DataFrame) -> pd.DataFrame:
     df["rank_change"] = df.groupby("character")["influence_rank"].diff(-1)  # positive = rising
     df["rank_change"] = df["rank_change"].fillna(0).astype(int)
 
-    # Rolling 3-episode smoothed influence
     df["influence_smooth"] = (
         df.groupby("character")["influence_score"]
         .transform(lambda x: x.rolling(3, min_periods=1, center=True).mean())
