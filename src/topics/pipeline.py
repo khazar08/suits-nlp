@@ -1,22 +1,6 @@
-"""
-Topic Evolution Pipeline — Step 5 Orchestrator
-
-Reads:  data/processed/suits_dialogue.csv
-Writes:
-  suits_topic_keywords.csv    — top 15 keywords per topic
-  suits_topic_episodes.csv    — per-episode topic weight distribution
-  suits_topic_evolution.csv   — topic weights + rolling averages + dominant topic
-
-Usage:
-    python src/topics/pipeline.py
-    python src/topics/pipeline.py --n-topics 12
-    python src/topics/pipeline.py --use-bertopic
-"""
-
 import argparse
 import sys
 from pathlib import Path
-
 import numpy as np
 import pandas as pd
 
@@ -34,8 +18,6 @@ def run(
     processed = data_dir / "processed"
     processed.mkdir(parents=True, exist_ok=True)
 
-    # ── Load dialogue ─────────────────────────────────────────────────────────
-    _h("Loading dialogue")
     dialogue_path = processed / "suits_dialogue.csv"
     if not dialogue_path.exists():
         sys.exit("[ERROR] suits_dialogue.csv not found. Run src/pipeline.py first.")
@@ -51,7 +33,6 @@ def run(
         _save_placeholder(processed, n_topics)
         return {}
 
-    # ── Fit topic model ───────────────────────────────────────────────────────
     _h(f"Fitting {'BERTopic' if use_bertopic else 'LDA'} ({n_topics} topics)")
     if use_bertopic:
         model = BERTopicModel(n_topics=n_topics)
@@ -61,7 +42,6 @@ def run(
     model.fit(ep_texts["text"].tolist())
     print("  Model fitted.")
 
-    # ── Topic keywords ────────────────────────────────────────────────────────
     keywords_df = model.top_words()
     keywords_df.to_csv(processed / "suits_topic_keywords.csv", index=False)
     print(f"\n  Top keywords per topic:")
@@ -70,7 +50,6 @@ def run(
         label = model.topic_label(tid)
         print(f"    T{tid:02d} | {', '.join(top5):<55} → '{label}'")
 
-    # ── Episode topic distributions ────────────────────────────────────────────
     _h("Computing topic distributions per episode")
     topic_matrix = model.transform(ep_texts["text"].tolist())   # (n_eps, n_topics)
 
@@ -85,7 +64,6 @@ def run(
     )
     ep_topics.to_csv(processed / "suits_topic_episodes.csv", index=False)
 
-    # ── Rolling averages for smooth trend lines ───────────────────────────────
     _h("Computing topic evolution (rolling averages)")
     evo = ep_topics.copy()
     topic_col_names = [f"topic_{i:02d}" for i in range(n_topics)]
@@ -95,8 +73,6 @@ def run(
         )
     evo.to_csv(processed / "suits_topic_evolution.csv", index=False)
 
-    # ── Summary ───────────────────────────────────────────────────────────────
-    _h("Topic Evolution Summary")
     dom_per_season = (
         ep_topics.groupby("season")["dominant_topic_label"]
         .agg(lambda x: x.value_counts().index[0])
@@ -108,7 +84,6 @@ def run(
         ).sum()
         print(f"    Season {season}: '{label}'  ({count} episodes)")
 
-    print(f"\n  Files saved to {processed}/")
     for f in ["suits_topic_keywords.csv", "suits_topic_episodes.csv", "suits_topic_evolution.csv"]:
         rows = pd.read_csv(processed / f).shape[0]
         print(f"    {f:<42} {rows:>6} rows")
@@ -122,7 +97,6 @@ def run(
 
 
 def _save_placeholder(processed: Path, n_topics: int) -> None:
-    """Create empty CSVs so the dashboard doesn't crash on missing files."""
     cols = ["episode_id", "season", "episode_num"] + \
            [f"topic_{i:02d}" for i in range(n_topics)] + \
            ["dominant_topic", "dominant_topic_label"]
