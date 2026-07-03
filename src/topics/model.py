@@ -1,25 +1,11 @@
-"""
-Topic Evolution Model — Step 5 (BERTopic / LDA)
-
-Discovers latent narrative arcs in Suits dialogue and tracks their intensity
-episode-by-episode, giving you "Season 1 = fraud + mentorship, Season 4 = power
-struggle" as a data artefact rather than a guess.
-
-Fast mode  (default): sklearn LDA — no extra deps, runs in seconds.
-Full mode  (--use-bertopic): BERTopic with sentence-transformers embeddings
-           — richer topics, needs:  pip install bertopic sentence-transformers
-"""
-
 import re
 import warnings
 from typing import Optional
-
 import numpy as np
 import pandas as pd
 from sklearn.decomposition import LatentDirichletAllocation
 from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
 
-# ── English stopwords (no NLTK download needed) ──────────────────────────────
 _STOPWORDS = set("""
 a about above after again against all also am an and any are aren't as at
 be because been before being below between both but by can't cannot could
@@ -37,7 +23,6 @@ where where's which while who who's whom why why's will with won't would
 wouldn't you you'd you'll you're you've your yours yourself yourselves
 """.split())
 
-# Suits-specific noise words to suppress from topics
 _SUITS_NOISE = {
     "harvey", "mike", "louis", "donna", "jessica", "rachel",
     "specter", "litt", "ross", "pearson", "zane", "paulsen",
@@ -47,8 +32,6 @@ _SUITS_NOISE = {
 }
 
 _ALL_STOP = _STOPWORDS | _SUITS_NOISE
-
-# ── Text preprocessing ────────────────────────────────────────────────────────
 
 def _clean(text: str) -> str:
     text = text.lower()
@@ -69,8 +52,6 @@ def aggregate_episode_text(dialogue_df: pd.DataFrame) -> pd.DataFrame:
     agg = agg.sort_values(["season", "episode_num"]).reset_index(drop=True)
     return agg
 
-
-# ── LDA Topic Model ───────────────────────────────────────────────────────────
 
 class LDATopicModel:
     def __init__(self, n_topics: int = 10, n_words: int = 15, seed: int = 42):
@@ -131,8 +112,6 @@ class LDATopicModel:
         return _TOPIC_HINTS.get(frozenset(self.vocab[top[:2]]), f"Topic {topic_id}: {words}")
 
 
-# ── Heuristic topic labels (matched by top-2 keyword pair) ───────────────────
-# Will rarely fire on real data; mainly documents intent.
 _TOPIC_HINTS: dict[frozenset, str] = {
     frozenset({"firm", "partner"}): "Firm Politics",
     frozenset({"case", "client"}): "Client Cases",
@@ -147,13 +126,7 @@ _TOPIC_HINTS: dict[frozenset, str] = {
 }
 
 
-# ── BERTopic (optional) ───────────────────────────────────────────────────────
-
 class BERTopicModel:
-    """
-    Wrapper around BERTopic for richer topic discovery.
-    Requires: pip install bertopic sentence-transformers
-    """
     def __init__(self, n_topics: int = 10):
         try:
             from bertopic import BERTopic
